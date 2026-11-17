@@ -100,17 +100,41 @@ export async function POST(req: NextRequest) {
     // 3. Try Supabase insertion if tables exist
     if (supabaseAdmin) {
       try {
-        const { data: threadData } = await supabaseAdmin
+        let insertThreadPayload: any = {
+          id: threadObj.id,
+          user_id: threadObj.user_id,
+          title: threadObj.title,
+          category: threadObj.category,
+          created_at: threadObj.created_at,
+          updated_at: threadObj.updated_at,
+        };
+
+        let { data: threadData, error: tErr } = await supabaseAdmin
           .from('chat_threads')
-          .insert([threadObj])
+          .insert([insertThreadPayload])
           .select()
           .single();
 
+        if (tErr && tErr.message?.includes('category')) {
+          delete insertThreadPayload.category;
+          const retryRes = await supabaseAdmin
+            .from('chat_threads')
+            .insert([insertThreadPayload])
+            .select()
+            .single();
+          threadData = retryRes.data;
+        }
+
         if (threadData?.id) {
-          await supabaseAdmin.from('chat_messages').insert([userMsgObj, assistantMsgObj]);
+          const { error: mErr } = await supabaseAdmin.from('chat_messages').insert([userMsgObj, assistantMsgObj]);
+          if (mErr && mErr.message?.includes('strategy_data')) {
+            const cleanAssistant = { ...assistantMsgObj };
+            delete (cleanAssistant as any).strategy_data;
+            await supabaseAdmin.from('chat_messages').insert([userMsgObj, cleanAssistant]);
+          }
         }
       } catch (dbError) {
-        // Table pending creation
+        console.warn('Supabase thread insert warning:', dbError);
       }
     }
 

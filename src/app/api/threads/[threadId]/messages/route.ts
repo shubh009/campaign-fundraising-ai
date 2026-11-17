@@ -91,13 +91,18 @@ export async function POST(
     // Store in Supabase if table exists
     if (supabaseAdmin) {
       try {
-        await supabaseAdmin.from('chat_messages').insert([userMsgObj, assistantMsgObj]);
+        const { error: mErr } = await supabaseAdmin.from('chat_messages').insert([userMsgObj, assistantMsgObj]);
+        if (mErr && mErr.message?.includes('strategy_data')) {
+          const cleanAssistant = { ...assistantMsgObj };
+          delete (cleanAssistant as any).strategy_data;
+          await supabaseAdmin.from('chat_messages').insert([userMsgObj, cleanAssistant]);
+        }
         await supabaseAdmin
           .from('chat_threads')
           .update({ updated_at: now })
           .eq('id', threadId);
       } catch (dbError) {
-        // Table pending creation
+        console.warn('Supabase message insert warning:', dbError);
       }
     }
 
