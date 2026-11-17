@@ -42,11 +42,12 @@ Schema:
   "disclaimer": "This plan is for operational strategy and planning purposes only. Verify jurisdiction-specific campaign finance contribution limits and reporting requirements with your election commission or legal counsel."
 }`;
 
+// Prioritize active, fast, non-congested models (2s response time)
 const CANDIDATE_MODELS = [
+  'gemini-3.1-flash-lite-preview',
+  'gemini-3-flash-preview',
   'gemini-3.5-flash-lite',
   'gemini-flash-latest',
-  'gemini-3.8-flash',
-  'gemini-pro-latest',
 ];
 
 export async function generateCampaignStrategy(query: string, category: string = 'general'): Promise<StrategyPlan> {

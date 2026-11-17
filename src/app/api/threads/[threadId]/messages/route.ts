@@ -2,28 +2,44 @@ import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase';
 import { generateCampaignStrategy } from '@/lib/gemini';
 
+const globalStore = (globalThis as any).__cf_store || {
+  threads: new Map<string, any[]>(),
+  messages: new Map<string, any[]>(),
+};
+(globalThis as any).__cf_store = globalStore;
+
 export async function GET(
   _req: NextRequest,
   { params }: { params: Promise<{ threadId: string }> }
 ) {
   try {
     const { threadId } = await params;
-    if (!threadId || !supabaseAdmin) {
+    if (!threadId) {
       return NextResponse.json({ success: true, messages: [] });
     }
 
-    const { data, error } = await supabaseAdmin
-      .from('chat_messages')
-      .select('*')
-      .eq('thread_id', threadId)
-      .order('created_at', { ascending: true });
+    let remoteMessages: any[] = [];
 
-    if (error) {
-      console.warn('Error fetching thread messages:', error.message);
-      return NextResponse.json({ success: true, messages: [] });
+    if (supabaseAdmin) {
+      try {
+        const { data, error } = await supabaseAdmin
+          .from('chat_messages')
+          .select('*')
+          .eq('thread_id', threadId)
+          .order('created_at', { ascending: true });
+
+        if (!error && Array.isArray(data) && data.length > 0) {
+          remoteMessages = data;
+        }
+      } catch (e) {
+        console.warn('Supabase fetch messages warning:', e);
+      }
     }
 
-    return NextResponse.json({ success: true, messages: data || [] });
+    const localMessages = globalStore.messages.get(threadId) || [];
+    const combined = remoteMessages.length > 0 ? remoteMessages : localMessages;
+
+    return NextResponse.json({ success: true, messages: combined });
   } catch (err: any) {
     return NextResponse.json({ success: false, error: err.message }, { status: 500 });
   }
@@ -48,34 +64,40 @@ export async function POST(
       return NextResponse.json({ success: false, error: 'Question is too short.' }, { status: 400 });
     }
 
-    // Call Gemini with context
+    // Call fast Gemini model
     const strategy = await generateCampaignStrategy(rawQuery, 'general');
 
     const userMessageId = crypto.randomUUID();
     const assistantMessageId = crypto.randomUUID();
     const now = new Date().toISOString();
 
-    if (supabaseAdmin && userId !== 'guest_user') {
-      try {
-        await supabaseAdmin.from('chat_messages').insert([
-          {
-            id: userMessageId,
-            thread_id: threadId,
-            user_id: userId,
-            role: 'user',
-            content: rawQuery,
-          },
-          {
-            id: assistantMessageId,
-            thread_id: threadId,
-            user_id: userId,
-            role: 'assistant',
-            content: strategy.summary,
-            strategy_data: strategy,
-          },
-        ]);
+    const userMsgObj = {
+      id: userMessageId,
+      thread_id: threadId,
+      user_id: userId,
+      role: 'user',
+      content: rawQuery,
+      created_at: now,
+    };
 
-        // Update thread updated_at
+    const assistantMsgObj = {
+      id: assistantMessageId,
+      thread_id: threadId,
+      user_id: userId,
+      role: 'assistant',
+      content: strategy.summary,
+      strategy_data: strategy,
+      created_at: now,
+    };
+
+    // Store in global memory store
+    const existing = globalStore.messages.get(threadId) || [];
+    globalStore.messages.set(threadId, [...existing, userMsgObj, assistantMsgObj]);
+
+    // Store in Supabase if table exists
+    if (supabaseAdmin) {
+      try {
+        await supabaseAdmin.from('chat_messages').insert([userMsgObj, assistantMsgObj]);
         await supabaseAdmin
           .from('chat_threads')
           .update({ updated_at: now })
@@ -87,27 +109,11 @@ export async function POST(
 
     return NextResponse.json({
       success: true,
-      userMessage: {
-        id: userMessageId,
-        thread_id: threadId,
-        user_id: userId,
-        role: 'user',
-        content: rawQuery,
-        created_at: now,
-      },
-      assistantMessage: {
-        id: assistantMessageId,
-        thread_id: threadId,
-        user_id: userId,
-        role: 'assistant',
-        content: strategy.summary,
-        strategy_data: strategy,
-        created_at: now,
-      },
+      userMessage: userMsgObj,
+      assistantMessage: assistantMsgObj,
     });
   } catch (err: any) {
     console.error('Error posting message:', err);
     return NextResponse.json({ success: false, error: err?.message || 'Server error' }, { status: 500 });
   }
 }
-

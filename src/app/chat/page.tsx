@@ -24,6 +24,7 @@ import {
   AlertTriangle,
   HelpCircle,
   Sparkles,
+  Database,
 } from 'lucide-react';
 import { supabasePublic } from '@/lib/supabase';
 import { ChatThread, ChatMessage, StrategyPlan } from '@/types/campaign';
@@ -66,15 +67,19 @@ export default function ChatDashboard() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const isCreatingThread = useRef(false);
 
-  // 1. Check user session & load threads
+  // 1. Check user session & load local/remote threads
   useEffect(() => {
     if (!supabasePublic) return;
 
     supabasePublic.auth.getSession().then(({ data: { session } }) => {
       if (!session) {
-        // If not logged in, redirect to login
-        router.push('/login?redirect=/chat');
+        // Allow guest or redirect
+        const guestId = localStorage.getItem('cf_guest_id') || 'guest_' + Math.random().toString(36).substring(2, 9);
+        localStorage.setItem('cf_guest_id', guestId);
+        setUser({ id: guestId, email: 'Campaign Organizer (Guest)' });
+        loadThreads(guestId);
       } else {
         setUser(session.user);
         loadThreads(session.user.id);
@@ -84,26 +89,48 @@ export default function ChatDashboard() {
     const {
       data: { subscription },
     } = supabasePublic.auth.onAuthStateChange((_event, session) => {
-      if (!session) {
-        router.push('/login?redirect=/chat');
-      } else {
+      if (session) {
         setUser(session.user);
+        loadThreads(session.user.id);
       }
     });
 
     return () => subscription.unsubscribe();
   }, [router]);
 
-  // 2. Load Threads from API
+  // 2. Load Threads (Local Cache First, then Server Sync)
   const loadThreads = async (userId: string) => {
+    // A. Instant Local Cache load
+    const cached = localStorage.getItem(`cf_threads_${userId}`);
+    if (cached) {
+      try {
+        const parsed = JSON.parse(cached);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          setThreads(parsed);
+          // Restore last active thread
+          const lastActive = localStorage.getItem(`cf_active_${userId}`);
+          if (lastActive && parsed.some((t: any) => t.id === lastActive)) {
+            setActiveThreadId(lastActive);
+          }
+        }
+      } catch (e) {
+        console.warn('Local thread parse error:', e);
+      }
+    }
+
+    // B. Server Sync
     try {
       const res = await fetch(`/api/threads?userId=${userId}`);
       const data = await res.json();
-      if (data.success && Array.isArray(data.threads)) {
+      if (data.success && Array.isArray(data.threads) && data.threads.length > 0) {
         setThreads(data.threads);
+        localStorage.setItem(`cf_threads_${userId}`, JSON.stringify(data.threads));
+        if (!activeThreadId) {
+          setActiveThreadId(data.threads[0].id);
+        }
       }
     } catch (e) {
-      console.warn('Failed to load threads:', e);
+      console.warn('Failed to sync remote threads:', e);
     }
   };
 
@@ -114,20 +141,46 @@ export default function ChatDashboard() {
       return;
     }
 
+    // Remember last active thread
+    if (user?.id) {
+      localStorage.setItem(`cf_active_${user.id}`, activeThreadId);
+    }
+
+    // A. Instant Local Cache lookup
+    const localMsgs = localStorage.getItem(`cf_msgs_${activeThreadId}`);
+    if (localMsgs) {
+      try {
+        const parsed = JSON.parse(localMsgs);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          setMessages(parsed);
+        }
+      } catch (e) {
+        console.warn('Error reading local messages:', e);
+      }
+    }
+
+    // B. If a new thread is currently being created, do NOT fetch and wipe out state
+    if (isCreatingThread.current) {
+      isCreatingThread.current = false;
+      return;
+    }
+
+    // C. Fetch from server
     const fetchMessages = async () => {
       try {
         const res = await fetch(`/api/threads/${activeThreadId}/messages`);
         const data = await res.json();
-        if (data.success && Array.isArray(data.messages)) {
+        if (data.success && Array.isArray(data.messages) && data.messages.length > 0) {
           setMessages(data.messages);
+          localStorage.setItem(`cf_msgs_${activeThreadId}`, JSON.stringify(data.messages));
         }
       } catch (e) {
-        console.warn('Failed to load messages:', e);
+        console.warn('Failed to load server messages:', e);
       }
     };
 
     fetchMessages();
-  }, [activeThreadId]);
+  }, [activeThreadId, user?.id]);
 
   // Scroll to bottom on new message
   useEffect(() => {
@@ -137,6 +190,7 @@ export default function ChatDashboard() {
   const handleSignOut = async () => {
     if (supabasePublic) {
       await supabasePublic.auth.signOut();
+      localStorage.removeItem(`cf_active_${user?.id}`);
       router.push('/');
     }
   };
@@ -158,41 +212,51 @@ export default function ChatDashboard() {
 
     try {
       if (!activeThreadId) {
-        // Create new thread
+        // Flag to prevent useEffect from immediately fetching and wiping out
+        isCreatingThread.current = true;
+
         const res = await fetch('/api/threads', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             query,
-            userId: user?.id,
+            userId: user?.id || 'guest_user',
             category: 'general',
           }),
         });
 
         const data = await res.json();
         if (data.success && data.thread) {
-          setThreads((prev) => [data.thread, ...prev]);
-          setActiveThreadId(data.thread.id);
+          const userMsg: ChatMessage = {
+            id: crypto.randomUUID(),
+            thread_id: data.thread.id,
+            user_id: user?.id,
+            role: 'user',
+            content: query,
+            created_at: new Date().toISOString(),
+          };
 
-          setMessages([
-            {
-              id: crypto.randomUUID(),
-              thread_id: data.thread.id,
-              user_id: user?.id,
-              role: 'user',
-              content: query,
-              created_at: new Date().toISOString(),
-            },
-            {
-              id: crypto.randomUUID(),
-              thread_id: data.thread.id,
-              user_id: user?.id,
-              role: 'assistant',
-              content: data.strategy.summary,
-              strategy_data: data.strategy,
-              created_at: new Date().toISOString(),
-            },
-          ]);
+          const assistantMsg: ChatMessage = {
+            id: crypto.randomUUID(),
+            thread_id: data.thread.id,
+            user_id: user?.id,
+            role: 'assistant',
+            content: data.strategy.summary,
+            strategy_data: data.strategy,
+            created_at: new Date().toISOString(),
+          };
+
+          const newMessages = [userMsg, assistantMsg];
+
+          // 1. Save to LocalStorage immediately
+          localStorage.setItem(`cf_msgs_${data.thread.id}`, JSON.stringify(newMessages));
+          const updatedThreads = [data.thread, ...threads.filter((t) => t.id !== data.thread.id)];
+          localStorage.setItem(`cf_threads_${user?.id}`, JSON.stringify(updatedThreads));
+
+          // 2. Set React states
+          setThreads(updatedThreads);
+          setMessages(newMessages);
+          setActiveThreadId(data.thread.id);
         }
       } else {
         // Add follow-up message to existing thread
@@ -205,22 +269,23 @@ export default function ChatDashboard() {
           created_at: new Date().toISOString(),
         };
 
-        setMessages((prev) => [...prev, tempUserMsg]);
+        const updatedWithTemp = [...messages, tempUserMsg];
+        setMessages(updatedWithTemp);
 
         const res = await fetch(`/api/threads/${activeThreadId}/messages`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             query,
-            userId: user?.id,
+            userId: user?.id || 'guest_user',
           }),
         });
 
         const data = await res.json();
         if (data.success && data.assistantMessage) {
-          setMessages((prev) =>
-            prev.filter((m) => m.id !== tempUserMsg.id).concat([data.userMessage, data.assistantMessage])
-          );
+          const finalizedMessages = messages.concat([data.userMessage, data.assistantMessage]);
+          setMessages(finalizedMessages);
+          localStorage.setItem(`cf_msgs_${activeThreadId}`, JSON.stringify(finalizedMessages));
         }
       }
     } catch (err) {
@@ -288,7 +353,7 @@ export default function ChatDashboard() {
           </p>
           {threads.length === 0 ? (
             <div className="text-center py-8 text-xs text-slate-400 px-4">
-              No saved strategies yet. Ask a question to start your first campaign roadmap!
+              No saved strategies yet. Ask a question below to start your first campaign roadmap!
             </div>
           ) : (
             threads.map((t) => (
@@ -300,7 +365,7 @@ export default function ChatDashboard() {
                 }}
                 className={`w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-xs font-semibold text-left transition-all ${
                   activeThreadId === t.id
-                    ? 'bg-amber-50 text-amber-900 border border-amber-200 font-bold'
+                    ? 'bg-amber-50 text-amber-900 border border-amber-200 font-bold shadow-2xs'
                     : 'text-slate-700 hover:bg-slate-100 border border-transparent'
                 }`}
               >
@@ -365,7 +430,7 @@ export default function ChatDashboard() {
 
         {/* Messages Stream Container */}
         <div className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 space-y-6">
-          {/* Welcome Screen when thread is empty */}
+          {/* Welcome Screen when thread has no messages */}
           {!activeThreadId && messages.length === 0 ? (
             <div className="max-w-3xl mx-auto py-12 space-y-8">
               <div className="text-center space-y-3">
@@ -537,7 +602,7 @@ export default function ChatDashboard() {
                 <div className="flex justify-start">
                   <div className="bg-white border border-slate-200 rounded-2xl px-5 py-4 shadow-xs flex items-center gap-3 text-xs font-semibold text-slate-600">
                     <Loader2 className="w-4 h-4 animate-spin text-amber-600" />
-                    <span>Synthesizing operational campaign roadmap...</span>
+                    <span>Synthesizing operational campaign roadmap (1-2s)...</span>
                   </div>
                 </div>
               )}
@@ -586,4 +651,3 @@ export default function ChatDashboard() {
     </div>
   );
 }
-
