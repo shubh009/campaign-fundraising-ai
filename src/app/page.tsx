@@ -10,12 +10,14 @@ import LegalDisclaimer from '@/components/LegalDisclaimer';
 import Footer from '@/components/Footer';
 import { StrategyPlan, GenerateStrategyResponse } from '@/types/campaign';
 import { AlertCircle } from 'lucide-react';
+import { supabasePublic } from '@/lib/supabase';
 
 export default function Home() {
   const [plan, setPlan] = useState<StrategyPlan | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [apiError, setApiError] = useState<string | null>(null);
   const [sessionId, setSessionId] = useState<string>('');
+  const [user, setUser] = useState<any>(null);
   const resultRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -26,6 +28,13 @@ export default function Home() {
       localStorage.setItem('cf_session_id', storedSession);
     }
     setSessionId(storedSession);
+
+    // Check user auth
+    if (supabasePublic) {
+      supabasePublic.auth.getSession().then(({ data: { session } }) => {
+        setUser(session?.user ?? null);
+      });
+    }
   }, []);
 
   const handleGenerateStrategy = async (query: string, category: string) => {
@@ -40,6 +49,7 @@ export default function Home() {
           query,
           category,
           sessionId,
+          userId: user?.id ?? null,
         }),
       });
 
@@ -70,7 +80,7 @@ export default function Home() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-[#0A1628] text-slate-100 selection:bg-amber-400 selection:text-slate-900">
+    <div className="min-h-screen flex flex-col bg-[#F8FAFC] text-slate-900 selection:bg-amber-400 selection:text-slate-900">
       <Header />
 
       <main className="flex-1">
@@ -79,8 +89,8 @@ export default function Home() {
         {/* Global Error Alert */}
         {apiError && (
           <div className="max-w-4xl mx-auto px-4 mb-8">
-            <div className="flex items-center gap-3 p-4 rounded-xl bg-red-950/50 border border-red-800 text-red-200 text-sm">
-              <AlertCircle className="w-5 h-5 flex-shrink-0 text-red-400" />
+            <div className="flex items-center gap-3 p-4 rounded-xl bg-red-50 border border-red-200 text-red-800 text-sm">
+              <AlertCircle className="w-5 h-5 flex-shrink-0 text-red-600" />
               <span>{apiError}</span>
             </div>
           </div>

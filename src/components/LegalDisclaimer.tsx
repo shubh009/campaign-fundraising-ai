@@ -26,14 +26,14 @@ export default function LegalDisclaimer() {
   ];
 
   return (
-    <section id="safeguards" className="py-16 px-4 sm:px-6 lg:px-8 max-w-6xl mx-auto border-t border-slate-800/80">
-      <div className="bg-[#091528] border border-blue-900/50 rounded-2xl p-6 sm:p-10 shadow-2xl">
+    <section id="safeguards" className="py-16 px-4 sm:px-6 lg:px-8 max-w-6xl mx-auto border-t border-slate-200/80">
+      <div className="bg-slate-50 border border-slate-200 rounded-2xl p-6 sm:p-10 shadow-xs">
         <div className="text-center space-y-2 mb-10">
-          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-blue-900/40 text-blue-300 border border-blue-800/50">
+          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-blue-100 text-[#0F1F38]">
             Compliance & Transparency
           </div>
-          <h2 className="text-2xl sm:text-3xl font-extrabold text-white">Our Safety & Compliance Safeguards</h2>
-          <p className="text-slate-400 text-sm max-w-xl mx-auto">
+          <h2 className="text-2xl sm:text-3xl font-extrabold text-[#0F1F38]">Our Safety & Compliance Safeguards</h2>
+          <p className="text-slate-600 text-sm max-w-xl mx-auto">
             Ethical, transparent, and lawful campaign planning built into every layer of our platform.
           </p>
         </div>
@@ -42,13 +42,13 @@ export default function LegalDisclaimer() {
           {safeguards.map((item, idx) => {
             const Icon = item.icon;
             return (
-              <div key={idx} className="flex gap-4 p-5 rounded-xl bg-[#0E1F3B]/60 border border-slate-800">
-                <div className="p-3 rounded-xl bg-blue-600/10 text-amber-400 h-fit border border-blue-500/20">
+              <div key={idx} className="flex gap-4 p-5 rounded-xl bg-white border border-slate-200/80 shadow-2xs">
+                <div className="p-3 rounded-xl bg-blue-50 text-[#0F1F38] h-fit border border-blue-100">
                   <Icon className="w-5 h-5 flex-shrink-0" />
                 </div>
                 <div className="space-y-1">
-                  <h3 className="text-base font-bold text-white">{item.title}</h3>
-                  <p className="text-xs text-slate-300 leading-relaxed">{item.desc}</p>
+                  <h3 className="text-base font-bold text-[#0F1F38]">{item.title}</h3>
+                  <p className="text-xs text-slate-600 leading-relaxed">{item.desc}</p>
                 </div>
               </div>
             );
@@ -58,4 +58,3 @@ export default function LegalDisclaimer() {
     </section>
   );
 }
-

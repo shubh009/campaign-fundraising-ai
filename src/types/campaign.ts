@@ -27,6 +27,7 @@ export interface GenerateStrategyRequest {
   query: string;
   category?: CampaignCategory;
   sessionId?: string;
+  threadId?: string;
 }
 
 export interface GenerateStrategyResponse {
@@ -47,3 +48,21 @@ export interface FeedbackResponse {
   error?: string;
 }
 
+export interface ChatThread {
+  id: string;
+  user_id: string;
+  title: string;
+  category: CampaignCategory;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ChatMessage {
+  id: string;
+  thread_id: string;
+  user_id: string;
+  role: 'user' | 'assistant';
+  content: string;
+  strategy_data?: StrategyPlan | null;
+  created_at: string;
+}

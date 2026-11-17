@@ -42,7 +42,12 @@ Schema:
   "disclaimer": "This plan is for operational strategy and planning purposes only. Verify jurisdiction-specific campaign finance contribution limits and reporting requirements with your election commission or legal counsel."
 }`;
 
-const CANDIDATE_MODELS = ['gemini-flash-latest', 'gemini-3.8-flash', 'gemini-2.5-flash-lite'];
+const CANDIDATE_MODELS = [
+  'gemini-3.5-flash-lite',
+  'gemini-flash-latest',
+  'gemini-3.8-flash',
+  'gemini-pro-latest',
+];
 
 export async function generateCampaignStrategy(query: string, category: string = 'general'): Promise<StrategyPlan> {
   if (!apiKey) {
@@ -101,7 +106,7 @@ export async function generateCampaignStrategy(query: string, category: string =
     } catch (err: any) {
       console.warn(`Model ${modelName} attempt failed:`, err?.message || err);
       lastError = err;
-      // Try next model in cascade
+      // Continue to next candidate model
     }
   }
 
