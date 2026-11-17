@@ -73,6 +73,15 @@ export default function ChatDashboard() {
   useEffect(() => {
     if (!supabasePublic) return;
 
+    // Check URL prompt param
+    if (typeof window !== 'undefined') {
+      const searchParams = new URLSearchParams(window.location.search);
+      const promptParam = searchParams.get('prompt');
+      if (promptParam) {
+        setInputQuery(promptParam);
+      }
+    }
+
     supabasePublic.auth.getSession().then(({ data: { session } }) => {
       if (!session) {
         // Allow guest or redirect
