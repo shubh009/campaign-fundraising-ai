@@ -1,36 +1,77 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Campaign Fundraising AI 🏛️
 
-## Getting Started
+**Smarter Fundraising. Stronger Campaign.**
 
-First, run the development server:
+An executive, AI-assisted fundraising strategy platform designed for political, civic, and community campaigns. Representatives enter plain-language campaign questions and receive practical, structured roadmaps, budget guidance, volunteer allocation models, and actionable next steps.
 
+---
+
+## 🌟 Key Features
+
+- **Natural Language Inquiry:** Ask operational questions like *"How can we raise our first $10,000?"* or *"Plan a small-dollar grassroots backyard dinner"*.
+- **Quick-Start Prompts:** Pre-curated prompts for event planning, donor outreach, budget allocation, and digital campaigns.
+- **Actionable Roadmaps:** Multi-step timelines (Weeks 1-2, Event Day, 48hr follow-up) with volunteer hour estimates and budget bands.
+- **Strict Compliance Safeguards:** Built-in boundaries to avoid fabricating contribution limits; guides campaign teams to official election authorities (FEC, state ethics boards).
+- **Export & Copy:** 1-click clipboard copy and `.txt` file export.
+- **User Feedback Loop:** Instant thumbs-up / thumbs-down ratings logged directly to Supabase.
+
+---
+
+## 🛠️ Tech Stack
+
+| Layer | Technology |
+| :--- | :--- |
+| **Frontend Framework** | **Next.js 16 (App Router) & React 19** |
+| **Styling** | **Tailwind CSS v4** (Executive Deep Navy & Gold design tokens) |
+| **Icons** | **Lucide-react** |
+| **AI Engine** | **Google Gemini API** (`gemini-flash-latest` with automated model fallback) |
+| **Database & Auth** | **Supabase (PostgreSQL)** |
+| **Deployment Target** | **Vercel** (Git-triggered continuous deployment) |
+
+---
+
+## 🚀 Quick Start (Local Setup)
+
+### 1. Clone the repository
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+git clone https://github.com/shubh009/campaign-fundraising-ai.git
+cd campaign-fundraising-ai
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+### 2. Install dependencies
+```bash
+npm install
+```
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### 3. Configure Environment Variables
+Create a `.env.local` file in the root directory:
+```env
+GEMINI_API_KEY=your_gemini_api_key
+NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your_anon_key
+SUPABASE_SERVICE_ROLE_KEY=your_service_role_key
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+### 4. Setup Supabase Database Tables
+Open your **Supabase Dashboard ➔ SQL Editor** and execute the queries in `supabase/schema.sql`.
 
-## Learn More
+### 5. Run Development Server
+```bash
+npm run dev
+```
+Open [http://localhost:3000](http://localhost:3000) in your browser.
 
-To learn more about Next.js, take a look at the following resources:
+---
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## ☁️ Deploying to Vercel
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+1. Push your repository to GitHub.
+2. In Vercel, click **"Add New Project"** and import `campaign-fundraising-ai`.
+3. Add the 4 environment variables from `.env.example` in Vercel Project Settings.
+4. Click **Deploy**!
 
-## Deploy on Vercel
+---
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## ⚖️ Legal & Compliance Disclaimer
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Campaign Fundraising AI is an operational planning tool and does **not** provide legal, election compliance, accounting, or tax advice. Always consult your official election board or qualified legal counsel for contribution limits and reporting deadlines.
