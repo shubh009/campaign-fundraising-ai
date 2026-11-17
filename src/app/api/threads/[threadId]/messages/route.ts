@@ -1,12 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase';
 import { generateCampaignStrategy } from '@/lib/gemini';
-
-const globalStore = (globalThis as any).__cf_store || {
-  threads: new Map<string, any[]>(),
-  messages: new Map<string, any[]>(),
-};
-(globalThis as any).__cf_store = globalStore;
+import { fileStore } from '@/lib/storage';
 
 export async function GET(
   _req: NextRequest,
@@ -32,12 +27,12 @@ export async function GET(
           remoteMessages = data;
         }
       } catch (e) {
-        console.warn('Supabase fetch messages warning:', e);
+        // Table pending creation
       }
     }
 
-    const localMessages = globalStore.messages.get(threadId) || [];
-    const combined = remoteMessages.length > 0 ? remoteMessages : localMessages;
+    const diskMessages = fileStore.getMessages(threadId);
+    const combined = remoteMessages.length > 0 ? remoteMessages : diskMessages;
 
     return NextResponse.json({ success: true, messages: combined });
   } catch (err: any) {
@@ -90,9 +85,8 @@ export async function POST(
       created_at: now,
     };
 
-    // Store in global memory store
-    const existing = globalStore.messages.get(threadId) || [];
-    globalStore.messages.set(threadId, [...existing, userMsgObj, assistantMsgObj]);
+    // Store in disk storage permanently
+    fileStore.saveMessages(threadId, [userMsgObj, assistantMsgObj]);
 
     // Store in Supabase if table exists
     if (supabaseAdmin) {
@@ -103,7 +97,7 @@ export async function POST(
           .update({ updated_at: now })
           .eq('id', threadId);
       } catch (dbError) {
-        console.warn('Supabase message insert error:', dbError);
+        // Table pending creation
       }
     }
 

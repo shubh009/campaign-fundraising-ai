@@ -1,0 +1,73 @@
+{
+  "threads": {
+    "permanent_user_1": [
+      {
+        "id": "68ecf915-1b32-4a0e-8d0d-190c853c0f05",
+        "user_id": "permanent_user_1",
+        "title": "How to organize a digital phonebank for ca...",
+        "category": "general",
+        "created_at": "2026-11-17T10:21:34.001Z",
+        "updated_at": "2026-11-17T10:21:34.001Z"
+      }
+    ]
+  },
+  "messages": {
+    "68ecf915-1b32-4a0e-8d0d-190c853c0f05": [
+      {
+        "id": "61872c32-8ed4-4739-b060-e1485d4fdd88",
+        "thread_id": "68ecf915-1b32-4a0e-8d0d-190c853c0f05",
+        "user_id": "permanent_user_1",
+        "role": "user",
+        "content": "How to organize a digital phonebank for campaign donations?",
+        "created_at": "2026-11-17T10:21:34.001Z"
+      },
+      {
+        "id": "f0224cd4-f142-4019-a6a1-a25b6c9b5333",
+        "thread_id": "68ecf915-1b32-4a0e-8d0d-190c853c0f05",
+        "user_id": "permanent_user_1",
+        "role": "assistant",
+        "content": "A digital phonebank leverages distributed volunteer power to secure small-dollar donations through personal outreach. Success relies on high-quality donor lists, clear scripts, and a centralized platform to track real-time progress.",
+        "strategy_data": {
+          "summary": "A digital phonebank leverages distributed volunteer power to secure small-dollar donations through personal outreach. Success relies on high-quality donor lists, clear scripts, and a centralized platform to track real-time progress.",
+          "actionSteps": [
+            {
+              "stepNumber": 1,
+              "title": "Select and Configure Platform",
+              "description": "Choose a peer-to-peer texting or phonebanking tool (e.g., Spoke, ThruTalk, or Hubdialer) that integrates with your CRM to ensure data flows directly into your donor database.",
+              "timeframe": "Week 1"
+            },
+            {
+              "stepNumber": 2,
+              "title": "Develop Script and Training Materials",
+              "description": "Draft a concise, conversational script that emphasizes the campaign's mission and a specific donation ask. Create a 15-minute training video or slide deck for volunteers.",
+              "timeframe": "Week 1"
+            },
+            {
+              "stepNumber": 3,
+              "title": "Recruit and Onboard Volunteers",
+              "description": "Send an email blast to your existing volunteer list inviting them to a virtual 'Kickoff & Training' session. Assign shifts and provide access credentials to the phonebanking software.",
+              "timeframe": "Week 2"
+            },
+            {
+              "stepNumber": 4,
+              "title": "Execute and Monitor",
+              "description": "Host the phonebank session. Use a Slack channel or Zoom room for real-time support, troubleshooting, and morale-boosting. Track metrics like 'calls made' and 'dollars raised' hourly.",
+              "timeframe": "Ongoing"
+            }
+          ],
+          "estimatedEffort": {
+            "budgetRange": "$100 - $500 (Software licensing fees)",
+            "volunteerHours": "10-20 hours/week",
+            "difficulty": "Medium"
+          },
+          "followUpQuestions": [
+            "Do you already have a CRM or donor database, or do you need recommendations?",
+            "What is the specific fundraising goal for this phonebank session?"
+          ],
+          "disclaimer": "This plan is for operational strategy and planning purposes only. Verify jurisdiction-specific campaign finance contribution limits and reporting requirements with your election commission or legal counsel."
+        },
+        "created_at": "2026-11-17T10:21:34.001Z"
+      }
+    ]
+  }
+}

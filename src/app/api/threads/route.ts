@@ -1,13 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase';
 import { generateCampaignStrategy } from '@/lib/gemini';
-
-// Shared global storage across Next.js API route modules
-const globalStore = (globalThis as any).__cf_store || {
-  threads: new Map<string, any[]>(),
-  messages: new Map<string, any[]>(),
-};
-(globalThis as any).__cf_store = globalStore;
+import { fileStore } from '@/lib/storage';
 
 export async function GET(req: NextRequest) {
   try {
@@ -24,20 +18,21 @@ export async function GET(req: NextRequest) {
           .eq('user_id', userId)
           .order('updated_at', { ascending: false });
 
-        if (!error && Array.isArray(data)) {
+        if (!error && Array.isArray(data) && data.length > 0) {
           remoteThreads = data;
         }
       } catch (e) {
-        console.warn('Supabase thread fetch warning:', e);
+        // Table not created yet in Supabase
       }
     }
 
-    const localList = globalStore.threads.get(userId) || [];
-    // Combine unique threads
+    // Disk-persisted storage fallback
+    const diskList = fileStore.getThreads(userId);
+
     const combined = [...remoteThreads];
-    for (const lt of localList) {
-      if (!combined.some((t: any) => t.id === lt.id)) {
-        combined.push(lt);
+    for (const dt of diskList) {
+      if (!combined.some((t: any) => t.id === dt.id)) {
+        combined.push(dt);
       }
     }
 
@@ -98,10 +93,9 @@ export async function POST(req: NextRequest) {
       created_at: now,
     };
 
-    // 2. Always store in shared global memory store
-    const existingList = globalStore.threads.get(userId) || [];
-    globalStore.threads.set(userId, [threadObj, ...existingList]);
-    globalStore.messages.set(threadId, [userMsgObj, assistantMsgObj]);
+    // 2. Always persist to disk storage permanently
+    fileStore.saveThread(userId, threadObj);
+    fileStore.saveMessages(threadId, [userMsgObj, assistantMsgObj]);
 
     // 3. Try Supabase insertion if tables exist
     if (supabaseAdmin) {
@@ -116,7 +110,7 @@ export async function POST(req: NextRequest) {
           await supabaseAdmin.from('chat_messages').insert([userMsgObj, assistantMsgObj]);
         }
       } catch (dbError) {
-        console.warn('Supabase DB table not yet migrated, serving from memory & local cache:', dbError);
+        // Table pending creation
       }
     }
 
